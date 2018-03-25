@@ -1,0 +1,19 @@
+.Wordcloud-positiveSentiment {
+    fill: #008000
+}
+
+.Wordcloud-negativeSentiment {
+    fill: #ff0000
+}
+
+.Wordcloud-neutralSentiment {
+    fill: #808080
+}
+
+.Wordcloud-text {
+    cursor: pointer;
+}
+
+.Wordcloud-text:hover {
+    text-shadow: 1px 1px 5px grey ;
+}

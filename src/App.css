@@ -1,0 +1,14 @@
+
+.App-column {
+  display: flex;
+}
+
+
+.App-left {
+  width: 75%;
+}
+
+.App-right {
+  width: 25%;
+  padding:40px;
+}

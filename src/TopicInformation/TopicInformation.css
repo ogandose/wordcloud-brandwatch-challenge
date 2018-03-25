@@ -1,0 +1,16 @@
+.TopicInformation-topicInfo{
+    font-size: 15px;
+    font-style: normal;
+} 
+
+.TopicInformation-positive {
+    color: green;
+}
+
+.TopicInformation-negative {
+    color: red;
+}
+
+.TopicInformation-neutral {
+    color: grey;
+}

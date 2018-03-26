@@ -6,9 +6,15 @@
 
 .App-left {
   width: 75%;
+  padding: 30px;
+  text-align: center;
 }
+.App-left svg {
+  max-width: 600px;
+}
+
 
 .App-right {
   width: 25%;
-  padding:40px;
+  padding: 30px;
 }

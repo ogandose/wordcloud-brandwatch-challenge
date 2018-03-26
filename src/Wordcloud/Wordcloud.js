@@ -3,80 +3,95 @@ import './Wordcloud.css';
 import PropTypes from 'prop-types';
 
 /**
- * 
- * @param {SVGRect} box1 
- * @param {SVGRect} box2 
+ * Check wheter the two rects intersect
+ * @param {SVGRect} rect1 
+ * @param {SVGRect} rect2 
  */
-export function chechBBoxIntersection(box1, box2) {
-    return !(box2.x > box1.x + box1.width ||
-        box2.x + box2.width < box1.x ||
-        box2.y > box1.y + box1.height ||
-        box2.y + box2.height < box1.y);
+export function checkBoxIntersection(rect1, rect2) {
+    return !(rect2.x > rect1.x + rect1.width ||
+        rect2.x + rect2.width < rect1.x ||
+        rect2.y > rect1.y + rect1.height ||
+        rect2.y + rect2.height < rect1.y);
 }
 
+/** step size for placement algorithm */
 const spiralTimeStepSize = 0.05;
+
+/**
+ * Definition of topic object
+ * @typedef {Object} Topic
+ * @property {string} label - topic which is displayed in word cloud.
+ * @property {number} volume - Indicates popularity of topic (number of mentions).
+ * @property {number} sentimentScore - sentiment score of topic.
+ * @property {Sentiment} sentiment - number of positive, neutral, and negative sentiments
+ */
+
+/**
+* Definition of topic object
+* @typedef {Object} Sentiment
+* @property {number} negative - number of negative mentions of topic
+* @property {number} neutral - number of neutral mentions of topic
+* @property {number} positive - number of positive mentions of topic
+*/
+
 
 
 /**
- * Wordcloud component which displays topics in spiral based wordcloud layout.
- * Topics are displayed in six different sizes according to volume.
- * Topics with a sentiment score > 60 (default value) are displayed in green, 
- * topics with a sentiment score < 40 (default value) are dispalyed in red and other topics are displayed in grey.
- * By clicking on a topic additional information on the topic is displayed.
- * @author Sophie
+ * Wordcloud component which displays topics in wordcloud layout.
  */
 export class Wordcloud extends React.Component {
 
     static propTypes = {
-        /**all topics with bigger sentiment score than positiveSentimentBound are green */
+        /** all topics with bigger sentiment score than positiveSentimentBound are green */
         positiveSentimentBound: PropTypes.number,
-        /**all topics with smaller sentiment score than negativeSentimentBound are green */
+        /** all topics with smaller sentiment score than negativeSentimentBound are green */
         negativeSentimentBound: PropTypes.number,
-        /**categories of sizes for topics in wordcloud*/
+        /** categories of sizes for topics in wordcloud*/
         textSizeCategories: PropTypes.arrayOf(PropTypes.number),
-        /**text sizes of topics in wordcloud*/
+        /** text sizes of topics in wordcloud*/
         textSizes: PropTypes.arrayOf(PropTypes.number),
-        /**topics data*/
+        /** list of topics displayed in wordcloud, see type definition of Topic */
         topics: PropTypes.array,
-        /**function which is called when clicking on topic*/
+        /** function which is called when clicking on topic*/
         onElementClicked: PropTypes.func
     }
 
     static defaultProps = {
         positiveSentimentBound: 60,
         negativeSentimentBound: 40,
-        textSizeCategories: [5, 20, 40, 100, 150, 200],
-        textSizes: [10, 20, 30, 40, 50, 60],
+        textSizeCategories: [5, 10, 15, 20, 100, 200],
+        textSizes: [8, 15, 20, 25, 30, 50],
         topics: [],
         onElementClicked: () => { }
     };
 
-
     /** @type {SVGTextElement[]} */
     textElements = [];
 
-    /** @type {[number, number][]} */
-    positions = [];
+    constructor(props) {
+        super(props);
+        this.state = { positions: {} };
+    }
 
-
-    /** 
-     * bounding box surrounding text elements to automatically set viewbox
-     * @type {SVGRect}
-     */
-    bBox;
-
+    /** @returns {Topic[]} */
     getTopics() {
         return this.props.topics;
     }
 
+    /** handles click on topic */
     handleClick(index) {
         this.props.onElementClicked(index);
     };
 
+    /** word placement algorithm according to https://users.soe.ucsc.edu/~pang/261/f15/misc/wordle.pdf */
     placeWords() {
-        const boundingBoxes = this.textElements.map(e => this.getBBox(e));
+        const boundingBoxes = this.textElements.map(e => {
+            const box = this.getBBox(e);
+            // copy as bounding box is read only on Microsoft Edge
+            return { x: box, y: box.y, width: box.width, height: box.height }
+        });
 
-        this.positions = boundingBoxes.map((element, index) => {
+        const positions = boundingBoxes.map((element, index) => {
             const preceedingElements = boundingBoxes.slice(0, index);
 
             let t = 0;
@@ -86,14 +101,14 @@ export class Wordcloud extends React.Component {
                 element.y = spiralPosition[1] - element.height / 2;
                 t += spiralTimeStepSize;
             }
-            //as long as text element collides with other element
-            while (!preceedingElements.every(precedingElement => !chechBBoxIntersection(precedingElement, element)));
+            // as long as text element collides with other element
+            while (!preceedingElements.every(precedingElement => !checkBoxIntersection(precedingElement, element)));
 
             // position is middle, bounding box coordiantes are upper left
             return [element.x, element.y + element.height / 2];
         });
 
-        this.forceUpdate();
+        this.setState({ positions });
     }
 
     componentDidMount() {
@@ -101,18 +116,22 @@ export class Wordcloud extends React.Component {
     }
 
     componentDidUpdate() {
-        // 
-        if (!this.bBox) {
-            this.bBox = this.getBBox(this.refs.wrapper);
-            this.forceUpdate();
+        if (!this.state.bBox) {
+            // get bounding box around text elements one time after placement
+            const bBox = this.getBBox(this.refs.wrapper);
+            this.setState({ bBox });
         }
     }
 
-    // equation to place words in archimedean spiral
+    /** equation to place words in archimedean spiral */
     spiral(t) {
         return [t * Math.cos(t), t * Math.sin(t)];
     }
 
+    /**
+     * get word color according to sentiment score
+     * @param i index of clicked topic
+     */
     getWordColor(i) {
         const sentimentScore = this.getTopics()[i].sentimentScore;
 
@@ -125,6 +144,10 @@ export class Wordcloud extends React.Component {
         }
     }
 
+    /**
+     * get text size according to size category
+     * @param i index of topic
+    */
     getTextSize(i) {
         const topicImportance = this.getTopics()[i].volume;
 
@@ -133,13 +156,12 @@ export class Wordcloud extends React.Component {
         return this.props.textSizes[categoryIndex];
     }
 
-
     render() {
         const words = this.getTopics().map(data => data.label);
 
         return (
             <svg xmlns="http://www.w3.org/2000/svg" version="1.1"
-                viewBox={this.bBox && `${this.bBox.x} ${this.bBox.y} ${this.bBox.width} ${this.bBox.height}`}
+                viewBox={this.state.bBox && `${this.state.bBox.x} ${this.state.bBox.y} ${this.state.bBox.width} ${this.state.bBox.height}`}
                 ref={(svg) => this.container = svg}>
                 <g ref="wrapper">
                     {words.map((word, i) =>
@@ -147,8 +169,8 @@ export class Wordcloud extends React.Component {
                             className={'Wordcloud-text ' + this.getWordColor(i)}
                             key={i}
                             ref={text => this.textElements[i] = text}
-                            x={this.positions[i] && this.positions[i][0]}
-                            y={this.positions[i] && this.positions[i][1]}
+                            x={this.state.positions[i] && this.state.positions[i][0]}
+                            y={this.state.positions[i] && this.state.positions[i][1]}
                             dominantBaseline="middle"
                             fontSize={this.getTextSize(i)} onClick={() => this.handleClick(i)}>
 
@@ -160,7 +182,7 @@ export class Wordcloud extends React.Component {
         );
     }
 
-    /** wrapper to enable tests with jsdom */
+    /** wrapper to enable tests as getBBox is not available on jsdom */
     getBBox(element) {
         return (element.getBBox && element.getBBox()) || { x: 0, y: 0, width: 50, height: 5 };
     }

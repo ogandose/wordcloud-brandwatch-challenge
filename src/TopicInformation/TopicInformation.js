@@ -1,11 +1,17 @@
 import React from 'react';
 import './TopicInformation.css';
+import PropTypes from 'prop-types';
 
 /**
  * TopicInformation component displays information on selected topic in wordcloud,
  * including the total mentions, positive mentions, neutral mentions, and negative mentions.
  */
 export default class TopicInformation extends React.Component {
+
+    static propTypes = {
+        /** topic on which information is displayed */
+        topic: PropTypes.object,
+    }
 
     render() {
 

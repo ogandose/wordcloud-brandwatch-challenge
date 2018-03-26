@@ -18,8 +18,8 @@ class App extends Component {
         <div className="App-column">
           <div className="App-left">
             <Wordcloud
-              textSizes={[10, 20, 30, 40, 50, 60]}
-              textSizeCategories={[5, 20, 40, 100, 150, 200]}
+              textSizes={[8, 15, 20, 25, 30, 50]}
+              textSizeCategories={[5, 10, 15, 20, 100, 200]}
               positiveSentimentBound={60}
               negativeSentimentBound={40}
               topics={topicsData.topics}
